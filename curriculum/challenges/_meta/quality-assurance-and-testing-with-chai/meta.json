@@ -1,11 +1,12 @@
 {
   "name": "Quality Assurance and Testing with Chai",
+  "isUpcomingChange": false,
   "dashedName": "quality-assurance-and-testing-with-chai",
-  "order": 2,
+  "order": 1,
   "time": "5 hours",
   "template": "",
   "required": [],
-  "superBlock": "information-security-and-quality-assurance",
+  "superBlock": "quality-assurance",
   "superOrder": 6,
   "challengeOrder": [
     [
@@ -98,13 +99,17 @@
     ],
     [
       "587d824f367417b2b2512c5c",
-      "Run Functional Tests using a Headless Browser"
+      "Simulate Actions Using a Headless Browser"
     ],
     [
       "587d8250367417b2b2512c5d",
-      "Run Functional Tests using a Headless Browser II"
+      "Run Functional Tests Using a Headless Browser"
+    ],
+    [
+      "5f8884f4c46685731aabfc41",
+      "Run Functional Tests Using a Headless Browser II"
     ]
   ],
   "helpRoom": "Help",
-  "fileName": "06-information-security-and-quality-assurance/testing-with-chai.json"
+  "fileName": "06-quality-assurance/quality-assurance-and-testing-with-chai.json"
 }

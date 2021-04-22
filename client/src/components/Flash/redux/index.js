@@ -1,12 +1,12 @@
 import { createAction, handleActions } from 'redux-actions';
-import nanoId from 'nanoid';
+import { nanoid } from 'nanoid';
 
 import { createTypes } from '../../../utils/createTypes';
 
 export const ns = 'flash';
 
 const initialState = {
-  messages: []
+  message: {}
 };
 
 const types = createTypes(['createFlashMessage', 'removeFlashMessage'], ns);
@@ -15,21 +15,21 @@ export const sagas = [];
 
 export const createFlashMessage = createAction(
   types.createFlashMessage,
-  msg => ({ id: nanoId(), ...msg })
+  msg => ({ id: nanoid(), ...msg })
 );
 export const removeFlashMessage = createAction(types.removeFlashMessage);
 
-export const flashMessagesSelector = state => state[ns].messages;
+export const flashMessageSelector = state => state[ns].message;
 
 export const reducer = handleActions(
   {
     [types.createFlashMessage]: (state, { payload }) => ({
       ...state,
-      messages: [...state.messages, payload]
+      message: payload
     }),
-    [types.removeFlashMessage]: (state, { payload }) => ({
+    [types.removeFlashMessage]: state => ({
       ...state,
-      messages: state.messages.filter(msg => msg.id !== payload)
+      message: {}
     })
   },
   initialState

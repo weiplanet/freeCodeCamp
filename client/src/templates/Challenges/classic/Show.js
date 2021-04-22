@@ -5,11 +5,11 @@ import { createStructuredSelector } from 'reselect';
 import { connect } from 'react-redux';
 import Helmet from 'react-helmet';
 import { graphql } from 'gatsby';
-import { first } from 'lodash';
 import Media from 'react-responsive';
+import { withTranslation } from 'react-i18next';
 
 import LearnLayout from '../../../components/layouts/Learn';
-import Editor from './Editor';
+import MultifileEditor from './MultifileEditor';
 import Preview from '../components/Preview';
 import SidePanel from '../components/Side-Panel';
 import Output from '../components/Output';
@@ -19,19 +19,22 @@ import VideoModal from '../components/VideoModal';
 import ResetModal from '../components/ResetModal';
 import MobileLayout from './MobileLayout';
 import DesktopLayout from './DesktopLayout';
+import Hotkeys from '../components/Hotkeys';
 
-import { createGuideUrl } from '../utils';
+import { getGuideUrl } from '../utils';
 import { challengeTypes } from '../../../../utils/challengeTypes';
 import { ChallengeNode } from '../../../redux/propTypes';
-import { dasherize } from '../../../../utils';
 import {
   createFiles,
   challengeFilesSelector,
   challengeTestsSelector,
+  initConsole,
   initTests,
   updateChallengeMeta,
   challengeMounted,
-  consoleOutputSelector
+  consoleOutputSelector,
+  executeChallenge,
+  cancelTests
 } from '../redux';
 
 import './classic.css';
@@ -47,29 +50,38 @@ const mapDispatchToProps = dispatch =>
   bindActionCreators(
     {
       createFiles,
+      initConsole,
       initTests,
       updateChallengeMeta,
-      challengeMounted
+      challengeMounted,
+      executeChallenge,
+      cancelTests
     },
     dispatch
   );
 
 const propTypes = {
+  cancelTests: PropTypes.func.isRequired,
   challengeMounted: PropTypes.func.isRequired,
   createFiles: PropTypes.func.isRequired,
   data: PropTypes.shape({
     challengeNode: ChallengeNode
   }),
+  executeChallenge: PropTypes.func.isRequired,
   files: PropTypes.shape({
     key: PropTypes.string
   }),
+  initConsole: PropTypes.func.isRequired,
   initTests: PropTypes.func.isRequired,
-  output: PropTypes.string,
+  output: PropTypes.arrayOf(PropTypes.string),
   pageContext: PropTypes.shape({
     challengeMeta: PropTypes.shape({
-      nextChallengePath: PropTypes.string
+      id: PropTypes.string,
+      nextChallengePath: PropTypes.string,
+      prevChallengePath: PropTypes.string
     })
   }),
+  t: PropTypes.func.isRequired,
   tests: PropTypes.arrayOf(
     PropTypes.shape({
       text: PropTypes.string,
@@ -93,6 +105,9 @@ class ShowClassic extends Component {
     this.state = {
       resizing: false
     };
+
+    this.containerRef = React.createRef();
+    this.editorRef = React.createRef();
   }
   onResize() {
     this.setState({ resizing: true });
@@ -104,62 +119,68 @@ class ShowClassic extends Component {
 
   componentDidMount() {
     const {
-      challengeMounted,
-      createFiles,
-      initTests,
-      updateChallengeMeta,
       data: {
-        challengeNode: {
-          files,
-          title,
-          fields: { tests },
-          challengeType
-        }
-      },
-      pageContext: { challengeMeta }
+        challengeNode: { title }
+      }
     } = this.props;
-    createFiles(files);
-    initTests(tests);
-    updateChallengeMeta({ ...challengeMeta, title, challengeType });
-    challengeMounted(challengeMeta.id);
+    this.initializeComponent(title);
   }
 
   componentDidUpdate(prevProps) {
     const {
       data: {
-        challengeNode: { title: prevTitle }
+        challengeNode: {
+          title: prevTitle,
+          fields: { tests: prevTests }
+        }
       }
     } = prevProps;
     const {
+      data: {
+        challengeNode: {
+          title: currentTitle,
+          fields: { tests: currTests }
+        }
+      }
+    } = this.props;
+    if (prevTitle !== currentTitle || prevTests !== currTests) {
+      this.initializeComponent(currentTitle);
+    }
+  }
+
+  initializeComponent(title) {
+    const {
       challengeMounted,
       createFiles,
+      initConsole,
       initTests,
       updateChallengeMeta,
       data: {
         challengeNode: {
           files,
-          title: currentTitle,
           fields: { tests },
-          challengeType
+          challengeType,
+          helpCategory
         }
       },
       pageContext: { challengeMeta }
     } = this.props;
-    if (prevTitle !== currentTitle) {
-      createFiles(files);
-      initTests(tests);
-      updateChallengeMeta({
-        ...challengeMeta,
-        title: currentTitle,
-        challengeType
-      });
-      challengeMounted(challengeMeta.id);
-    }
+    initConsole('');
+    createFiles(files);
+    initTests(tests);
+    updateChallengeMeta({
+      ...challengeMeta,
+      title,
+      challengeType,
+      helpCategory
+    });
+    challengeMounted(challengeMeta.id);
   }
 
   componentWillUnmount() {
-    const { createFiles } = this.props;
+    const { createFiles, cancelTests } = this.props;
     createFiles({});
+    cancelTests();
   }
 
   getChallenge = () => this.props.data.challengeNode;
@@ -172,19 +193,7 @@ class ShowClassic extends Component {
     return `${blockName}: ${title}`;
   }
 
-  getGuideUrl() {
-    const {
-      fields: { slug }
-    } = this.getChallenge();
-    return createGuideUrl(slug);
-  }
-
   getVideoUrl = () => this.getChallenge().videoUrl;
-
-  getChallengeFile() {
-    const { files } = this.props;
-    return first(Object.keys(files).map(key => files[key]));
-  }
 
   hasPreview() {
     const { challengeType } = this.getChallenge();
@@ -196,20 +205,25 @@ class ShowClassic extends Component {
 
   renderInstructionsPanel({ showToolPanel }) {
     const {
-      fields: { blockName },
+      block,
       description,
-      instructions
+      instructions,
+      superBlock,
+      translationPending
     } = this.getChallenge();
 
+    const { forumTopicId, title } = this.getChallenge();
     return (
       <SidePanel
+        block={block}
         className='full-height'
         description={description}
-        guideUrl={this.getGuideUrl()}
+        guideUrl={getGuideUrl({ forumTopicId, title })}
         instructions={instructions}
-        section={dasherize(blockName)}
         showToolPanel={showToolPanel}
-        title={this.getBlockNameTitle()}
+        superBlock={superBlock}
+        title={title}
+        translationPending={translationPending}
         videoUrl={this.getVideoUrl()}
       />
     );
@@ -217,19 +231,28 @@ class ShowClassic extends Component {
 
   renderEditor() {
     const { files } = this.props;
-    const challengeFile = first(Object.keys(files).map(key => files[key]));
+    const { description } = this.getChallenge();
     return (
-      challengeFile && <Editor {...challengeFile} fileKey={challengeFile.key} />
+      files && (
+        <MultifileEditor
+          challengeFiles={files}
+          containerRef={this.containerRef}
+          description={description}
+          editorRef={this.editorRef}
+          hasEditableBoundries={this.hasEditableBoundries()}
+          resizeProps={this.resizeProps}
+        />
+      )
     );
   }
 
   renderTestOutput() {
-    const { output } = this.props;
+    const { output, t } = this.props;
     return (
       <Output
         defaultOutput={`
 /**
-* Your test output will go here.
+* ${t('learn.test-output')}
 */
 `}
         output={output}
@@ -243,46 +266,83 @@ class ShowClassic extends Component {
     );
   }
 
+  hasEditableBoundries() {
+    const { files } = this.props;
+    return Object.values(files).some(
+      file =>
+        file.editableRegionBoundaries &&
+        file.editableRegionBoundaries.length === 2
+    );
+  }
+
   render() {
+    const {
+      block,
+      fields: { blockName },
+      forumTopicId,
+      superBlock,
+      title
+    } = this.getChallenge();
+    const {
+      executeChallenge,
+      pageContext: {
+        challengeMeta: { nextChallengePath, prevChallengePath }
+      },
+      files,
+      t
+    } = this.props;
+
     return (
-      <LearnLayout>
-        <Helmet
-          title={`Learn ${this.getBlockNameTitle()} | freeCodeCamp.org`}
-        />
-        <Media maxWidth={MAX_MOBILE_WIDTH}>
-          {matches =>
-            matches ? (
-              <MobileLayout
-                editor={this.renderEditor()}
-                guideUrl={this.getGuideUrl()}
-                hasPreview={this.hasPreview()}
-                instructions={this.renderInstructionsPanel({
-                  showToolPanel: false
-                })}
-                preview={this.renderPreview()}
-                testOutput={this.renderTestOutput()}
-                videoUrl={this.getVideoUrl()}
-              />
-            ) : (
-              <DesktopLayout
-                challengeFile={this.getChallengeFile()}
-                editor={this.renderEditor()}
-                hasPreview={this.hasPreview()}
-                instructions={this.renderInstructionsPanel({
-                  showToolPanel: true
-                })}
-                preview={this.renderPreview()}
-                resizeProps={this.resizeProps}
-                testOutput={this.renderTestOutput()}
-              />
-            )
-          }
-        </Media>
-        <CompletionModal />
-        <HelpModal />
-        <VideoModal videoUrl={this.getVideoUrl()} />
-        <ResetModal />
-      </LearnLayout>
+      <Hotkeys
+        editorRef={this.editorRef}
+        executeChallenge={executeChallenge}
+        innerRef={this.containerRef}
+        nextChallengePath={nextChallengePath}
+        prevChallengePath={prevChallengePath}
+      >
+        <LearnLayout>
+          <Helmet
+            title={`${t(
+              'learn.learn'
+            )} ${this.getBlockNameTitle()} | freeCodeCamp.org`}
+          />
+          <Media maxWidth={MAX_MOBILE_WIDTH}>
+            <MobileLayout
+              editor={this.renderEditor()}
+              guideUrl={getGuideUrl({ forumTopicId, title })}
+              hasPreview={this.hasPreview()}
+              instructions={this.renderInstructionsPanel({
+                showToolPanel: false
+              })}
+              preview={this.renderPreview()}
+              testOutput={this.renderTestOutput()}
+              videoUrl={this.getVideoUrl()}
+            />
+          </Media>
+          <Media minWidth={MAX_MOBILE_WIDTH + 1}>
+            <DesktopLayout
+              challengeFiles={files}
+              editor={this.renderEditor()}
+              hasEditableBoundries={this.hasEditableBoundries()}
+              hasPreview={this.hasPreview()}
+              instructions={this.renderInstructionsPanel({
+                showToolPanel: true
+              })}
+              preview={this.renderPreview()}
+              resizeProps={this.resizeProps}
+              testOutput={this.renderTestOutput()}
+            />
+          </Media>
+          <CompletionModal
+            block={block}
+            blockName={blockName}
+            superBlock={superBlock}
+          />
+          <HelpModal />
+          <VideoModal videoUrl={this.getVideoUrl()} />
+          <ResetModal />
+        </LearnLayout>
+      </Hotkeys>
     );
   }
 }
@@ -293,19 +353,27 @@ ShowClassic.propTypes = propTypes;
 export default connect(
   mapStateToProps,
   mapDispatchToProps
-)(ShowClassic);
+)(withTranslation()(ShowClassic));
 
+// TODO: handle jsx (not sure why it doesn't get an editableRegion) EDIT:
+// probably because the dummy challenge didn't include it, so Gatsby couldn't
+// infer it.
 export const query = graphql`
   query ClassicChallenge($slug: String!) {
     challengeNode(fields: { slug: { eq: $slug } }) {
+      block
       title
       description
       instructions
       challengeType
+      helpCategory
       videoUrl
+      superBlock
+      translationPending
+      forumTopicId
       fields {
-        slug
         blockName
+        slug
         tests {
           text
           testString
@@ -316,6 +384,15 @@ export const query = graphql`
         src
       }
       files {
+        indexcss {
+          key
+          ext
+          name
+          contents
+          head
+          tail
+          editableRegionBoundaries
+        }
         indexhtml {
           key
           ext
@@ -323,6 +400,7 @@ export const query = graphql`
           contents
           head
           tail
+          editableRegionBoundaries
         }
         indexjs {
           key
@@ -331,6 +409,7 @@ export const query = graphql`
           contents
           head
           tail
+          editableRegionBoundaries
         }
         indexjsx {
           key
@@ -339,6 +418,7 @@ export const query = graphql`
           contents
           head
           tail
+          editableRegionBoundaries
         }
       }
     }

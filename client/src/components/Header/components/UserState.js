@@ -2,11 +2,12 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
+import { Link } from 'gatsby';
 import Spinner from 'react-spinkit';
+import { useTranslation } from 'react-i18next';
 
 import { isSignedInSelector, userFetchStateSelector } from '../../../redux';
 import Login from './Login';
-import SignedIn from './SignedIn';
 
 const mapStateToProps = createSelector(
   userFetchStateSelector,
@@ -27,6 +28,8 @@ const propTypes = {
 
 function UserState(props) {
   const { isSignedIn, showLoading, disableSettings } = props;
+  const { t } = useTranslation();
+
   if (disableSettings) {
     return <Login />;
   }
@@ -41,7 +44,13 @@ function UserState(props) {
       />
     );
   }
-  return isSignedIn ? <SignedIn /> : <Login />;
+  return isSignedIn ? (
+    <Link className='top-right-nav-link' to='/settings'>
+      {t('buttons.settings')}
+    </Link>
+  ) : (
+    <Login />
+  );
 }
 
 UserState.displayName = 'UserState';

@@ -1,5 +1,11 @@
 import normalizeUrl from 'normalize-url';
-import isURL from 'validator/lib/isURL';
+import {
+  localhostValidator,
+  editorValidator,
+  composeValidators,
+  fCCValidator,
+  httpValidator
+} from './FormValidators';
 
 export { default as BlockSaveButton } from './BlockSaveButton.js';
 export { default as BlockSaveWrapper } from './BlockSaveWrapper.js';
@@ -10,64 +16,30 @@ const normalizeOptions = {
   stripWWW: false
 };
 
-// callIfDefined(fn: (Any) => Any) => (value: Any) => Any
-export function callIfDefined(fn) {
-  return value => (value ? fn(value) : value);
-}
-
-// formatUrl(url: String) => String
-export function formatUrl(url) {
-  if (typeof url === 'string' && url.length > 4 && url.indexOf('.') !== -1) {
-    // prevent trailing / from being stripped during typing
-    let lastChar = '';
-    if (url.substring(url.length - 1) === '/') {
-      lastChar = '/';
+export function formatUrlValues(values, options) {
+  const { isEditorLinkAllowed, isLocalLinkAllowed, types } = options;
+  const validatedValues = { values: {}, errors: [], invalidValues: [] };
+  const urlValues = Object.keys(values).reduce((result, key) => {
+    let value = values[key];
+    const nullOrWarning = composeValidators(
+      fCCValidator,
+      httpValidator,
+      isLocalLinkAllowed ? null : localhostValidator,
+      key === 'githubLink' || isEditorLinkAllowed ? null : editorValidator
+    )(value);
+    if (nullOrWarning) {
+      validatedValues.invalidValues.push(nullOrWarning);
     }
-    // prevent normalize-url from stripping last dot during typing
-    if (url.substring(url.length - 1) === '.') {
-      lastChar = '.';
+    if (value && types[key] === 'url') {
+      try {
+        value = normalizeUrl(value, normalizeOptions);
+      } catch (err) {
+        // Not a valid URL for testing or submission
+        validatedValues.errors.push({ error: err, value });
+      }
     }
-    return normalizeUrl(url, normalizeOptions) + lastChar;
-  }
-  return url;
-}
-
-export function isValidURL(data) {
-  /* eslint-disable camelcase */
-  return isURL(data, { require_protocol: true });
-  /* eslint-enable camelcase */
-}
-
-export function makeOptional(validator) {
-  return val => (val ? validator(val) : true);
-}
-
-export function makeRequired(validator) {
-  return val => (val ? validator(val) : false);
-}
-
-export function createFormValidator(fieldValidators) {
-  const fieldKeys = Object.keys(fieldValidators);
-  return values =>
-    fieldKeys
-      .map(field => {
-        if (fieldValidators[field](values[field])) {
-          return null;
-        }
-        return { [field]: !fieldValidators[field](values[field]) };
-      })
-      .filter(Boolean)
-      .reduce((errors, error) => ({ ...errors, ...error }), {});
-}
-
-export function getValidationState(field) {
-  if (field.pristine) {
-    return null;
-  }
-
-  if (/https?:\/\/glitch\.com\/edit\/#!\/.*/g.test(field.value)) {
-    return 'glitch-warning';
-  }
-
-  return field.error ? 'error' : 'success';
+    return { ...result, [key]: value };
+  }, {});
+  validatedValues.values = urlValues;
+  return validatedValues;
 }

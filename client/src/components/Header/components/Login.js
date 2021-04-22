@@ -2,58 +2,47 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
-import { navigate as gatsbyNavigate } from 'gatsby';
 import { Button } from '@freecodecamp/react-bootstrap';
+import { useTranslation } from 'react-i18next';
 
-import { hardGoTo, isSignedInSelector } from '../../../redux';
-import { apiLocation } from '../../../../config/env.json';
-
-import { gtagReportConversion } from '../../../analytics/gtag';
+import { isSignedInSelector } from '../../../redux';
+import envData from '../../../../../config/env.json';
 
 import './login.css';
 
-const mapStateToProps = createSelector(
-  isSignedInSelector,
-  isSignedIn => ({
-    isSignedIn
-  })
-);
-const mapDispatchToProps = dispatch => ({
-  navigate: location => dispatch(hardGoTo(location))
-});
+const { apiLocation, homeLocation } = envData;
 
-const createOnClick = (navigate, isSignedIn) => e => {
-  e.preventDefault();
-  gtagReportConversion();
-  if (isSignedIn) {
-    return gatsbyNavigate('/welcome');
-  }
-  return navigate(`${apiLocation}/signin`);
-};
+const mapStateToProps = createSelector(isSignedInSelector, isSignedIn => ({
+  isSignedIn
+}));
 
 function Login(props) {
-  const { children, navigate, isSignedIn, ...restProps } = props;
+  const { t } = useTranslation();
+  const {
+    block,
+    'data-test-label': dataTestLabel,
+    children,
+    isSignedIn
+  } = props;
+  const href = isSignedIn ? `${homeLocation}/learn` : `${apiLocation}/signin`;
   return (
     <Button
-      href='/signin'
-      onClick={createOnClick(navigate, isSignedIn)}
-      {...restProps}
       bsStyle='default'
-      className={(restProps.block ? 'btn-cta-big' : '') + ' signup-btn btn-cta'}
+      className={(block ? 'btn-cta-big btn-block' : '') + ' signup-btn btn-cta'}
+      data-test-label={dataTestLabel}
+      href={href}
     >
-      {children || 'Sign In'}
+      {children || t('buttons.sign-in')}
     </Button>
   );
 }
 
 Login.displayName = 'Login';
 Login.propTypes = {
+  block: PropTypes.bool,
   children: PropTypes.any,
-  isSignedIn: PropTypes.bool,
-  navigate: PropTypes.func.isRequired
+  'data-test-label': PropTypes.string,
+  isSignedIn: PropTypes.bool
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(Login);
+export default connect(mapStateToProps)(Login);

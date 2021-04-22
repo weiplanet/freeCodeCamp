@@ -20,7 +20,7 @@ export function wrapHandledError(err, { type, message, redirectTo }) {
   return err;
 }
 
-export function handle400Error(e, options = { redirectTo: '/welcome' }) {
+export function handle400Error(e, options = { redirectTo: '/' }) {
   const {
     response: { status }
   } = e;
@@ -33,16 +33,14 @@ export function handle400Error(e, options = { redirectTo: '/welcome' }) {
       return {
         ...flash,
         type: 'warn',
-        message: 'You are not authorised to continue on this route'
+        message: 'flash.not-authorized'
       };
     }
     case 404: {
       return {
         ...flash,
         type: 'info',
-        message:
-          "We couldn't find what you were looking for. " +
-          'Please check and try again'
+        message: 'flash.could-not-find'
       };
     }
     default: {
@@ -54,7 +52,7 @@ export function handle400Error(e, options = { redirectTo: '/welcome' }) {
 export function handle500Error(
   e,
   options = {
-    redirectTo: '/welcome'
+    redirectTo: '/'
   },
   _reportClientSideError = reportClientSideError
 ) {

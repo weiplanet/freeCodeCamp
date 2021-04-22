@@ -1,20 +1,29 @@
-/* global expect */
+/* global expect jest */
 
 import React from 'react';
-import ShallowRenderer from 'react-test-renderer/shallow';
-import Enzyme from 'enzyme';
-import Adapter from 'enzyme-adapter-react-16';
+import { useStaticQuery } from 'gatsby';
+import { render } from '@testing-library/react';
 
-import Map from './Map';
-import mockNodes from '../../__mocks__/map-nodes';
-import mockIntroNodes from '../../__mocks__/intro-nodes';
+import { Map } from './';
+import mockChallengeNodes from '../../__mocks__/challenge-nodes';
 
-Enzyme.configure({ adapter: new Adapter() });
-const renderer = new ShallowRenderer();
+beforeEach(() => {
+  useStaticQuery.mockImplementationOnce(() => ({
+    allChallengeNode: {
+      nodes: mockChallengeNodes
+    }
+  }));
+});
+
+// set .scrollTo to avoid errors in default test environment
+window.scrollTo = jest.fn();
 
 test('<Map /> snapshot', () => {
-  const component = renderer.render(
-    <Map introNodes={mockIntroNodes} nodes={mockNodes} />
-  );
-  expect(component).toMatchSnapshot('Map');
+  const { container } = render(<Map {...props} />);
+
+  expect(container).toMatchSnapshot('Map');
 });
+
+const props = {
+  forLanding: true
+};

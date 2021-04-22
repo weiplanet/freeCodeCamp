@@ -1,7 +1,5 @@
 import React, { Component, Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { bindActionCreators } from 'redux';
-import { Link, navigate } from 'gatsby';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import {
@@ -10,9 +8,13 @@ import {
   FormGroup,
   ControlLabel,
   Button,
-  Col
+  Col,
+  Row
 } from '@freecodecamp/react-bootstrap';
 import Helmet from 'react-helmet';
+import { Trans, withTranslation } from 'react-i18next';
+
+import Login from '../components/Header/components/Login';
 
 import {
   isSignedInSelector,
@@ -26,9 +28,10 @@ const propTypes = {
   email: PropTypes.string,
   isSignedIn: PropTypes.bool,
   reportUser: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired,
   userFetchState: PropTypes.shape({
     pending: PropTypes.bool,
-    comnplete: PropTypes.bool,
+    complete: PropTypes.bool,
     errored: PropTypes.bool
   }),
   username: PropTypes.string
@@ -45,25 +48,19 @@ const mapStateToProps = createSelector(
   })
 );
 
-const mapDispatchToProps = dispatch =>
-  bindActionCreators({ reportUser }, dispatch);
+const mapDispatchToProps = {
+  reportUser
+};
 
 class ShowUser extends Component {
   constructor(props) {
     super(props);
 
-    this.timer = null;
     this.state = {
       textarea: ''
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-  }
-
-  componentWillUnmount() {
-    if (this.timer) {
-      clearTimeout(this.timer);
-    }
   }
 
   handleChange(e) {
@@ -79,44 +76,31 @@ class ShowUser extends Component {
     const { username, reportUser } = this.props;
     return reportUser({ username, reportDescription });
   }
-  setNavigationTimer() {
-    if (!this.timer) {
-      this.timer = setTimeout(() => navigate('/signin'), 5000);
-    }
-  }
 
   render() {
-    const { username, isSignedIn, userFetchState, email } = this.props;
+    const { username, isSignedIn, userFetchState, email, t } = this.props;
     const { pending, complete, errored } = userFetchState;
     if (pending && !complete) {
       return <Loader fullScreen={true} />;
     }
 
     if ((complete || errored) && !isSignedIn) {
-      this.setNavigationTimer();
       return (
         <main>
           <FullWidthRow>
-            <Spacer />
-            <Spacer />
-            <Panel bsStyle='info'>
+            <Spacer size={2} />
+            <Panel bsStyle='info' className='text-center'>
               <Panel.Heading>
                 <Panel.Title componentClass='h3'>
-                  You need to be signed in to report a user
+                  {t('report.sign-in')}
                 </Panel.Title>
               </Panel.Heading>
               <Panel.Body className='text-center'>
-                <Spacer />
-                <p>
-                  You will be redirected to sign in to freeCodeCamp.org
-                  automatically in 5 seconds
-                </p>
-                <p>
-                  <Link to='/signin'>
-                    Or you can here if you do not want to wait
-                  </Link>
-                </p>
-                <Spacer />
+                <Spacer size={2} />
+                <Col md={6} mdOffset={3} sm={8} smOffset={2} xs={12}>
+                  <Login block={true}>{t('buttons.click-here')}</Login>
+                </Col>
+                <Spacer size={3} />
               </Panel.Body>
             </Panel>
           </FullWidthRow>
@@ -125,42 +109,43 @@ class ShowUser extends Component {
     }
 
     const { textarea } = this.state;
-
+    const placeholderText = t('report.details');
     return (
       <Fragment>
         <Helmet>
-          <title>Report a users profile | freeCodeCamp.org</title>
+          <title>{t('report.portfolio')} | freeCodeCamp.org</title>
         </Helmet>
-        <FullWidthRow>
-          <Spacer />
-          <Spacer />
-          <Col md={8} mdOffset={2}>
-            <h2>
-              Do you want to report {username}
-              's profile for abuse?
-            </h2>
+        <Spacer size={2} />
+        <Row className='text-center overflow-fix'>
+          <Col sm={8} smOffset={2} xs={12}>
+            <h2>{t('report.portfolio-2', { username: username })}</h2>
+          </Col>
+        </Row>
+        <Row className='overflow-fix'>
+          <Col sm={6} smOffset={3} xs={12}>
             <p>
-              We will notify the community moderators' team, and a send copy of
-              this report to your email:{' '}
-              <span className='green-text'>{email}</span>.
+              <Trans email={email} i18nKey='report.notify-1'>
+                <strong>{{ email }}</strong>
+              </Trans>
             </p>
-            <p>We may get back to you for more information, if required.</p>
+            <p>{t('report.notify-2')}</p>
             <form onSubmit={this.handleSubmit}>
               <FormGroup controlId='report-user-textarea'>
-                <ControlLabel>Additional Information</ControlLabel>
+                <ControlLabel>{t('report.what')}</ControlLabel>
                 <FormControl
                   componentClass='textarea'
                   onChange={this.handleChange}
-                  placeholder=''
+                  placeholder={placeholderText}
                   value={textarea}
                 />
               </FormGroup>
               <Button block={true} bsStyle='primary' type='submit'>
-                Submit the report
+                {t('report.submit')}
               </Button>
+              <Spacer />
             </form>
           </Col>
-        </FullWidthRow>
+        </Row>
       </Fragment>
     );
   }
@@ -169,7 +154,6 @@ class ShowUser extends Component {
 ShowUser.displayName = 'ShowUser';
 ShowUser.propTypes = propTypes;
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(ShowUser);
+export default withTranslation()(
+  connect(mapStateToProps, mapDispatchToProps)(ShowUser)
+);

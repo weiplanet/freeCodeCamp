@@ -1,4 +1,6 @@
-import words from './words.json';
+const config = require('../../../config/env.json');
+
+const words = require(`../../i18n/locales/${config.clientLocale}/motivation.json`);
 
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -6,14 +8,6 @@ function randomItem(arr) {
 
 export function randomQuote() {
   return randomItem(words.motivationalQuotes);
-}
-
-export function randomPhrase() {
-  return randomItem(words.phrases);
-}
-
-export function randomVerb() {
-  return randomItem(words.verbs);
 }
 
 export function randomCompliment() {

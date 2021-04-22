@@ -1,16 +1,35 @@
+import envData from '../../../config/env.json';
 import axios from 'axios';
+import Tokens from 'csrf';
+import cookies from 'browser-cookies';
 
-const base = '/internal';
+const { apiLocation } = envData;
+
+const base = apiLocation;
+const tokens = new Tokens();
+
+axios.defaults.withCredentials = true;
+
+// _csrf is passed to the client as a cookie. Tokens are sent back to the server
+// via headers:
+function setCSRFTokens() {
+  const _csrf = typeof window !== 'undefined' && cookies.get('_csrf');
+  if (!_csrf) return;
+  axios.defaults.headers.post['CSRF-Token'] = tokens.create(_csrf);
+  axios.defaults.headers.put['CSRF-Token'] = tokens.create(_csrf);
+}
 
 function get(path) {
   return axios.get(`${base}${path}`);
 }
 
 export function post(path, body) {
+  setCSRFTokens();
   return axios.post(`${base}${path}`, body);
 }
 
 function put(path, body) {
+  setCSRFTokens();
   return axios.put(`${base}${path}`, body);
 }
 
@@ -22,10 +41,6 @@ function put(path, body) {
 
 export function getSessionUser() {
   return get('/user/get-session-user');
-}
-
-export function getIdToNameMap() {
-  return get('/api/challenges/get-id-to-name');
 }
 
 export function getUserProfile(username) {
@@ -45,6 +60,21 @@ export function getArticleById(shortId) {
 }
 
 /** POST **/
+export function postChargeStripe(body) {
+  return post('/donate/charge-stripe', body);
+}
+
+export function addDonation(body) {
+  return post('/donate/add-donation', body);
+}
+
+export function postCreateStripeSession(body) {
+  return post('/donate/create-stripe-session', body);
+}
+
+export function putUpdateLegacyCert(body) {
+  return post('/update-my-projects', body);
+}
 
 export function postReportUser(body) {
   return post('/user/report-user', body);

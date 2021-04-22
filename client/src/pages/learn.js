@@ -1,112 +1,97 @@
 import React from 'react';
+import { Grid, Row, Col } from '@freecodecamp/react-bootstrap';
 import PropTypes from 'prop-types';
+import { createSelector } from 'reselect';
 import { graphql } from 'gatsby';
 import Helmet from 'react-helmet';
 import { connect } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
-import {
-  ChallengeNode,
-  AllChallengeNode,
-  AllMarkdownRemark
-} from '../redux/propTypes';
-
+import { Spacer } from '../components/helpers';
 import LearnLayout from '../components/layouts/Learn';
-import { Link, Spacer } from '../components/helpers';
 import Map from '../components/Map';
+import Intro from '../components/Intro';
+import {
+  userFetchStateSelector,
+  isSignedInSelector,
+  userSelector
+} from '../redux';
+import { ChallengeNode } from '../redux/propTypes';
 
-import './learn.css';
-
-const mapStateToProps = () => ({});
+const mapStateToProps = createSelector(
+  userFetchStateSelector,
+  isSignedInSelector,
+  userSelector,
+  (fetchState, isSignedIn, user) => ({
+    fetchState,
+    isSignedIn,
+    user
+  })
+);
 
 const propTypes = {
   data: PropTypes.shape({
-    challengeNode: ChallengeNode,
-    allChallengeNode: AllChallengeNode,
-    allMarkdownRemark: AllMarkdownRemark
+    challengeNode: ChallengeNode
+  }),
+  fetchState: PropTypes.shape({
+    pending: PropTypes.bool,
+    complete: PropTypes.bool,
+    errored: PropTypes.bool
+  }),
+  isSignedIn: PropTypes.bool,
+  state: PropTypes.object,
+  user: PropTypes.shape({
+    name: PropTypes.string,
+    username: PropTypes.string,
+    completedChallengeCount: PropTypes.number
   })
 };
 
-const IndexPage = ({
+const LearnPage = ({
+  isSignedIn,
+  fetchState: { pending, complete },
+  user: { name = '', completedChallengeCount = 0 },
   data: {
     challengeNode: {
       fields: { slug }
-    },
-    allChallengeNode: { edges },
-    allMarkdownRemark: { edges: mdEdges }
+    }
   }
-}) => (
-  <LearnLayout>
-    <div className='learn-page-wrapper'>
-      <Helmet title='Learn | freeCodeCamp.org' />
-      <Spacer />
-      <Spacer />
-      <h2>Welcome to the freeCodeCamp curriculum</h2>
-      <p>
-        We have thousands of coding lessons to help you improve your skills.
-      </p>
-      <p>You can earn each certification by completing its 5 final projects.</p>
-      <p>
-        And yes - all of this is 100% free, thanks to the thousands of campers
-        who{' '}
-        <Link external={true} to='/donate'>
-          donate
-        </Link>{' '}
-        to our nonprofit.
-      </p>
-      <p>
-        If you are new to coding, we recommend you{' '}
-        <Link to={slug}>start at the beginning</Link>.
-      </p>
-      <Spacer />
-      <Map
-        introNodes={mdEdges.map(({ node }) => node)}
-        nodes={edges
-          .map(({ node }) => node)
-          .filter(({ isPrivate }) => !isPrivate)}
-      />
-    </div>
-  </LearnLayout>
-);
+}) => {
+  const { t } = useTranslation();
 
-IndexPage.displayName = 'IndexPage';
-IndexPage.propTypes = propTypes;
+  return (
+    <LearnLayout>
+      <Helmet title={t('metaTags:title')} />
+      <Grid>
+        <Row>
+          <Col md={8} mdOffset={2} sm={10} smOffset={1} xs={12}>
+            <Intro
+              complete={complete}
+              completedChallengeCount={completedChallengeCount}
+              isSignedIn={isSignedIn}
+              name={name}
+              pending={pending}
+              slug={slug}
+            />
+            <Map />
+            <Spacer size={2} />
+          </Col>
+        </Row>
+      </Grid>
+    </LearnLayout>
+  );
+};
 
-export default connect(mapStateToProps)(IndexPage);
+LearnPage.displayName = 'LearnPage';
+LearnPage.propTypes = propTypes;
+
+export default connect(mapStateToProps)(LearnPage);
 
 export const query = graphql`
   query FirstChallenge {
     challengeNode(order: { eq: 0 }, challengeOrder: { eq: 0 }) {
       fields {
         slug
-      }
-    }
-    allChallengeNode(sort: { fields: [superOrder, order, challengeOrder] }) {
-      edges {
-        node {
-          fields {
-            slug
-            blockName
-          }
-          id
-          block
-          title
-          isRequired
-          superBlock
-          dashedName
-        }
-      }
-    }
-    allMarkdownRemark(filter: { frontmatter: { block: { ne: null } } }) {
-      edges {
-        node {
-          frontmatter {
-            title
-            block
-          }
-          fields {
-            slug
-          }
-        }
       }
     }
   }

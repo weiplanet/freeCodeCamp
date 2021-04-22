@@ -9,7 +9,7 @@ const mapStateToProps = () => ({});
 const mapDispatchToProps = dispatch =>
   bindActionCreators({ appMount }, dispatch);
 
-class AppMountNotifer extends Component {
+class AppMountNotifier extends Component {
   componentDidMount() {
     return this.props.appMount();
   }
@@ -18,13 +18,10 @@ class AppMountNotifer extends Component {
   }
 }
 
-AppMountNotifer.displayName = 'AppMountNotifier';
-AppMountNotifer.propTypes = {
+AppMountNotifier.displayName = 'AppMountNotifier';
+AppMountNotifier.propTypes = {
   appMount: PropTypes.func.isRequired,
   render: PropTypes.func.isRequired
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(AppMountNotifer);
+export default connect(mapStateToProps, mapDispatchToProps)(AppMountNotifier);

@@ -1,5 +1,5 @@
 # -------------------------------------------------
-# CODEOWNERS - For automated review request for 
+# CODEOWNERS - For automated review request for
 # high impact files.
 #
 # Important: The order in this file cascades.
@@ -8,11 +8,16 @@
 # -------------------------------------------------
 
 # -------------------------------------------------
-# All files except markdown are owned by dev team
+# All files are owned by dev team
 # -------------------------------------------------
 
 * @freecodecamp/dev-team
+
+# --- Owned by none (negate rule above) ---
+
 *.md
+package.json
+package-lock.json
 
 # -------------------------------------------------
 # All files in the root are owned by dev team
@@ -20,10 +25,15 @@
 
 /* @freecodecamp/dev-team
 
-# -------------------------------------------------
-# All markdown files in the root are owned 
-# by Quincy Larson. 
-# He oversees the README, LICENSE, etc.
-# -------------------------------------------------
+# --- Owned by none (negate rule above) ---
 
-/*.md @QuincyLarson
+/package.json
+/package-lock.json
+
+# -------------------------------------------------
+# Files that need attention from Staff
+# -------------------------------------------------
+/*.md @freeCodeCamp/staff
+/client/i18n/locales/english/motivation.json @freeCodeCamp/staff @freeCodeCamp/i18n
+/client/i18n/locales/chinese/motivation.json @freeCodeCamp/staff @freeCodeCamp/i18n
+/client/i18n/locales/espanol/motivation.json @freeCodeCamp/staff @freeCodeCamp/i18n

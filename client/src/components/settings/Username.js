@@ -9,7 +9,7 @@ import {
   Alert,
   FormGroup
 } from '@freecodecamp/react-bootstrap';
-import isAscii from 'validator/lib/isAscii';
+import { withTranslation } from 'react-i18next';
 
 import {
   validateUsername,
@@ -18,10 +18,12 @@ import {
 } from '../../redux/settings';
 import BlockSaveButton from '../helpers/form/BlockSaveButton';
 import FullWidthRow from '../helpers/FullWidthRow';
+import { isValidUsername } from '../../../../utils/validate';
 
 const propTypes = {
   isValidUsername: PropTypes.bool,
   submitNewUsername: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired,
   username: PropTypes.string,
   validateUsername: PropTypes.func.isRequired,
   validating: PropTypes.bool
@@ -44,13 +46,8 @@ const mapDispatchToProps = dispatch =>
     dispatch
   );
 
-const invalidCharsRE = /[/\s?:@=&"'<>#%{}|\\^~[\]`,.;!*()$]/;
-const invlaidCharError = {
-  valid: false,
-  error: 'Username contains invalid characters'
-};
-const valididationSuccess = { valid: true, error: null };
-const usernameTooShort = { valid: false, error: 'Username is too short' };
+const hex = '[0-9a-f]';
+const tempUserRegex = new RegExp(`^fcc${hex}{8}-(${hex}{4}-){3}${hex}{12}$`);
 
 class UsernameSettings extends Component {
   constructor(props) {
@@ -60,7 +57,8 @@ class UsernameSettings extends Component {
       isFormPristine: true,
       formValue: props.username,
       characterValidation: { valid: false, error: null },
-      submitClicked: false
+      submitClicked: false,
+      isUserNew: tempUserRegex.test(props.username)
     };
 
     this.handleChange = this.handleChange.bind(this);
@@ -77,7 +75,8 @@ class UsernameSettings extends Component {
       /* eslint-disable-next-line react/no-did-update-set-state */
       return this.setState({
         isFormPristine: username === formValue,
-        submitClicked: false
+        submitClicked: false,
+        isUserNew: tempUserRegex.test(username)
       });
     }
     return null;
@@ -104,7 +103,8 @@ class UsernameSettings extends Component {
       {
         formValue: newValue,
         isFormPristine: username === newValue,
-        characterValidation: this.validateFormInput(newValue)
+        characterValidation: this.validateFormInput(newValue),
+        submitClicked: false
       },
       () =>
         this.state.isFormPristine || this.state.characterValidation.error
@@ -114,45 +114,49 @@ class UsernameSettings extends Component {
   }
 
   validateFormInput(formValue) {
-    if (formValue.length < 3) {
-      return usernameTooShort;
-    }
-
-    if (!isAscii(formValue)) {
-      return invlaidCharError;
-    }
-    if (invalidCharsRE.test(formValue)) {
-      return invlaidCharError;
-    }
-    return valididationSuccess;
+    return isValidUsername(formValue);
   }
 
   renderAlerts(validating, error, isValidUsername) {
+    const { t } = this.props;
+
     if (!validating && error) {
+      console.log(error);
       return (
         <FullWidthRow>
-          <Alert bsStyle='danger'>{error}</Alert>
+          <Alert bsStyle='danger'>
+            {t(`settings.username.${error}`, {
+              username: this.state.formValue
+            })}
+          </Alert>
         </FullWidthRow>
       );
     }
     if (!validating && !isValidUsername) {
       return (
         <FullWidthRow>
-          <Alert bsStyle='warning'>Username not available</Alert>
+          <Alert bsStyle='warning'>{t('settings.username.unavailable')}</Alert>
         </FullWidthRow>
       );
     }
     if (validating) {
       return (
         <FullWidthRow>
-          <Alert bsStyle='info'>Validating username</Alert>
+          <Alert bsStyle='info'>{t('settings.username.validating')}</Alert>
         </FullWidthRow>
       );
     }
-    if (!validating && isValidUsername) {
+    if (!validating && isValidUsername && this.state.isUserNew) {
       return (
         <FullWidthRow>
-          <Alert bsStyle='success'>Username is available</Alert>
+          <Alert bsStyle='success'>{t('settings.username.available')}</Alert>
+        </FullWidthRow>
+      );
+    } else if (!validating && isValidUsername && !this.state.isUserNew) {
+      return (
+        <FullWidthRow>
+          <Alert bsStyle='success'>{t('settings.username.available')}</Alert>
+          <Alert bsStyle='info'>{t('settings.username.change')}</Alert>
         </FullWidthRow>
       );
     }
@@ -166,7 +170,7 @@ class UsernameSettings extends Component {
       characterValidation: { valid, error },
       submitClicked
     } = this.state;
-    const { isValidUsername, validating } = this.props;
+    const { isValidUsername, t, validating } = this.props;
 
     return (
       <Fragment>
@@ -174,7 +178,7 @@ class UsernameSettings extends Component {
           <FullWidthRow>
             <FormGroup>
               <ControlLabel htmlFor='username-settings'>
-                <strong>Username</strong>
+                <strong>{t('settings.labels.username')}</strong>
               </ControlLabel>
               <FormControl
                 name='username-settings'
@@ -204,4 +208,4 @@ UsernameSettings.propTypes = propTypes;
 export default connect(
   mapStateToProps,
   mapDispatchToProps
-)(UsernameSettings);
+)(withTranslation()(UsernameSettings));

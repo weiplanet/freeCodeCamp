@@ -1,87 +1,140 @@
 import React, { Component, Fragment } from 'react';
 import Helmet from 'react-helmet';
-import { StripeProvider, Elements } from 'react-stripe-elements';
-import { Row, Col } from '@freecodecamp/react-bootstrap';
-import { Link } from 'gatsby';
+import PropTypes from 'prop-types';
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+import { createSelector } from 'reselect';
+import { Grid, Row, Col, Alert } from '@freecodecamp/react-bootstrap';
+import { withTranslation } from 'react-i18next';
 
-import { stripePublicKey } from '../../config/env.json';
+import { Spacer, Loader } from '../components/helpers';
+import DonateForm from '../components/Donation/DonateForm';
+import {
+  DonationText,
+  DonationSupportText,
+  DonationOptionsText,
+  DonationOptionsAlertText
+} from '../components/Donation/DonationTextComponents';
+import { signInLoadingSelector, userSelector, executeGA } from '../redux';
+import CampersImage from '../components/landing/components/CampersImage';
 
-import Spacer from '../components/helpers/Spacer';
-import DonateForm from '../components/Donation/components/DonateForm';
-import DonateText from '../components/Donation/components/DonateText';
-import PoweredByStripe from '../components/Donation/components/poweredByStripe';
+const propTypes = {
+  executeGA: PropTypes.func,
+  isDonating: PropTypes.bool,
+  showLoading: PropTypes.bool.isRequired,
+  t: PropTypes.func.isRequired
+};
 
-import './index.css';
+const mapStateToProps = createSelector(
+  userSelector,
+  signInLoadingSelector,
+  ({ isDonating }, showLoading) => ({
+    isDonating,
+    showLoading
+  })
+);
+
+const mapDispatchToProps = dispatch =>
+  bindActionCreators(
+    {
+      executeGA
+    },
+    dispatch
+  );
 
 class DonatePage extends Component {
   constructor(...props) {
     super(...props);
     this.state = {
-      stripe: null
+      enableSettings: false
     };
-    this.handleStripeLoad = this.handleStripeLoad.bind(this);
+    this.handleProcessing = this.handleProcessing.bind(this);
   }
+
   componentDidMount() {
-    if (window.Stripe) {
-      /* eslint-disable react/no-did-mount-set-state */
-      this.setState(state => ({
-        ...state,
-        stripe: window.Stripe(stripePublicKey)
-      }));
-    } else {
-      document
-        .querySelector('#stripe-js')
-        .addEventListener('load', this.handleStripeLoad);
-    }
+    this.props.executeGA({
+      type: 'event',
+      data: {
+        category: 'Donation View',
+        action: `Displayed donate page`,
+        nonInteraction: true
+      }
+    });
   }
 
-  componentWillUnmount() {
-    const stripeMountPoint = document.querySelector('#stripe-js');
-
-    if (stripeMountPoint) {
-      stripeMountPoint.removeEventListener('load', this.handleStripeLoad);
-    }
-  }
-
-  handleStripeLoad() {
-    // Create Stripe instance once Stripe.js loads
-    console.info('stripe has loaded');
-    this.setState(state => ({
-      ...state,
-      stripe: window.Stripe(stripePublicKey)
-    }));
+  handleProcessing(duration, amount, action = 'stripe button click') {
+    this.props.executeGA({
+      type: 'event',
+      data: {
+        category: 'Donation',
+        action: `donate page ${action}`,
+        label: duration,
+        value: amount
+      }
+    });
   }
 
   render() {
+    const { showLoading, isDonating, t } = this.props;
+
+    if (showLoading) {
+      return <Loader fullScreen={true} />;
+    }
+
     return (
       <Fragment>
-        <Helmet title='Support our nonprofit | freeCodeCamp.org' />
-        <Spacer />
-        <Row>
-          <Col sm={8} smOffset={2} xs={12}>
-            <h2 className='text-center'>Become a Supporter</h2>
-            <DonateText />
-          </Col>
-          <Col sm={6} smOffset={3} xs={12}>
-            <hr />
-            <StripeProvider stripe={this.state.stripe}>
-              <Elements>
-                <DonateForm />
-              </Elements>
-            </StripeProvider>
-            <div className='text-center'>
-              <Link to='/donate-other'>Other ways to donate.</Link>
-              <Spacer />
-              <PoweredByStripe />
-            </div>
-            <Spacer />
-          </Col>
-        </Row>
+        <Helmet title={`${t('donate.title')} | freeCodeCamp.org`} />
+        <Grid className='donate-page-wrapper'>
+          <Spacer />
+          <Row>
+            <Fragment>
+              <Col lg={6} lgOffset={0} md={8} mdOffset={2} sm={10} smOffset={1}>
+                <Row>
+                  <Col className={'text-center'} xs={12}>
+                    {isDonating ? (
+                      <h2>{t('donate.thank-you')}</h2>
+                    ) : (
+                      <h2>{t('donate.help-more')}</h2>
+                    )}
+                    <Spacer />
+                  </Col>
+                </Row>
+                {isDonating ? (
+                  <Alert>
+                    <p>{t('donate.thank-you-2')}</p>
+                    <br />
+                    <DonationOptionsAlertText />
+                  </Alert>
+                ) : null}
+                <DonationText />
+                <DonateForm
+                  enableDonationSettingsPage={this.enableDonationSettingsPage}
+                  handleProcessing={this.handleProcessing}
+                />
+                <Row className='donate-support'>
+                  <Col xs={12}>
+                    <hr />
+                    <DonationOptionsText />
+                    <DonationSupportText />
+                  </Col>
+                </Row>
+              </Col>
+              <Col lg={6}>
+                <CampersImage page='donate' />
+              </Col>
+            </Fragment>
+          </Row>
+          <Spacer />
+        </Grid>
       </Fragment>
     );
   }
 }
 
 DonatePage.displayName = 'DonatePage';
+DonatePage.propTypes = propTypes;
 
-export default DonatePage;
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(withTranslation()(DonatePage));

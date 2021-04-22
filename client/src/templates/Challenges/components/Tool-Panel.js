@@ -2,8 +2,13 @@ import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
-import { Button } from '@freecodecamp/react-bootstrap';
+import {
+  Button,
+  DropdownButton,
+  MenuItem
+} from '@freecodecamp/react-bootstrap';
 
 import './tool-panel.css';
 import { openModal, executeChallenge } from '../redux';
@@ -39,15 +44,16 @@ function ToolPanel({
   guideUrl,
   videoUrl
 }) {
+  const { t } = useTranslation();
   return (
     <Fragment>
       <div
-        className={`tool-panel-group ${
+        className={`tool-panel-group button-group ${
           isMobile ? 'tool-panel-group-mobile' : ''
         }`}
       >
         <Button block={true} bsStyle='primary' onClick={executeChallenge}>
-          {isMobile ? 'Run' : 'Run the Tests'}
+          {isMobile ? t('buttons.run') : t('buttons.run-test')}
         </Button>
         <Button
           block={true}
@@ -55,37 +61,42 @@ function ToolPanel({
           className='btn-invert'
           onClick={openResetModal}
         >
-          {isMobile ? 'Reset' : 'Reset All Code'}
+          {isMobile ? t('buttons.reset') : t('buttons.reset-code')}
         </Button>
-        {guideUrl ? (
-          <Button
-            block={true}
-            bsStyle='primary'
-            className='btn-invert'
-            href={guideUrl}
-            target='_blank'
-          >
-            {isMobile ? 'Hint' : 'Get a hint'}
-          </Button>
-        ) : null}
-        {videoUrl ? (
-          <Button
-            block={true}
-            bsStyle='primary'
-            className='btn-invert'
-            onClick={openVideoModal}
-          >
-            {isMobile ? 'Video' : 'Watch a video'}
-          </Button>
-        ) : null}
-        <Button
+        <DropdownButton
           block={true}
           bsStyle='primary'
           className='btn-invert'
-          onClick={openHelpModal}
+          id='get-help-dropdown'
+          title={isMobile ? t('buttons.help') : t('buttons.get-help')}
         >
-          {isMobile ? 'Help' : 'Ask for help'}
-        </Button>
+          {guideUrl ? (
+            <MenuItem
+              bsStyle='primary'
+              className='btn-invert'
+              href={guideUrl}
+              target='_blank'
+            >
+              {t('buttons.get-hint')}
+            </MenuItem>
+          ) : null}
+          {videoUrl ? (
+            <MenuItem
+              bsStyle='primary'
+              className='btn-invert'
+              onClick={openVideoModal}
+            >
+              {t('buttons.watch-video')}
+            </MenuItem>
+          ) : null}
+          <MenuItem
+            bsStyle='primary'
+            className='btn-invert'
+            onClick={openHelpModal}
+          >
+            {t('buttons.ask-for-help')}
+          </MenuItem>
+        </DropdownButton>
       </div>
     </Fragment>
   );
@@ -94,51 +105,4 @@ function ToolPanel({
 ToolPanel.displayName = 'ToolPanel';
 ToolPanel.propTypes = propTypes;
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(ToolPanel);
-
-/*
-<Button
-        block={true}
-        bsStyle='default'
-        className='btn-big'
-        onClick={executeChallenge}
-        >
-        Run tests (Ctrl + Enter)
-      </Button>
-      <div className='button-spacer' />
-      <Button
-        block={true}
-        bsStyle='default'
-        className='btn-big'
-        onClick={openResetModal}
-        >
-        Reset this lesson
-      </Button>
-      <div className='button-spacer' />
-      {guideUrl && (
-        <div>
-          <Button
-            block={true}
-            bsStyle='default'
-            className='btn-big'
-            href={guideUrl}
-            target='_blank'
-            >
-            Get a hint
-          </Button>
-          <div className='button-spacer' />
-        </div>
-      )}
-      <Button
-        block={true}
-        bsStyle='default'
-        className='btn-big'
-        onClick={openHelpModal}
-        >
-        Ask for help on the forum
-      </Button>
-      <div className='button-spacer' />
-*/
+export default connect(mapStateToProps, mapDispatchToProps)(ToolPanel);

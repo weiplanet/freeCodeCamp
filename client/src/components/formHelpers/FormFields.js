@@ -1,5 +1,6 @@
 import React from 'react';
-import { kebabCase, startCase } from 'lodash';
+import { kebabCase } from 'lodash';
+import normalizeUrl from 'normalize-url';
 import PropTypes from 'prop-types';
 import {
   Alert,
@@ -9,69 +10,100 @@ import {
   FormGroup,
   HelpBlock
 } from '@freecodecamp/react-bootstrap';
+import { Field } from 'react-final-form';
+import {
+  editorValidator,
+  localhostValidator,
+  composeValidators,
+  fCCValidator,
+  httpValidator
+} from './FormValidators';
 
 const propTypes = {
-  errors: PropTypes.objectOf(PropTypes.string),
-  fields: PropTypes.objectOf(
-    PropTypes.shape({
-      name: PropTypes.string.isRequired,
-      onChange: PropTypes.func.isRequired,
-      value: PropTypes.string.isRequired
-    })
+  formFields: PropTypes.arrayOf(
+    PropTypes.shape({ name: PropTypes.string, label: PropTypes.string })
+      .isRequired
   ).isRequired,
   options: PropTypes.shape({
-    errors: PropTypes.objectOf(
-      PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(null)])
-    ),
     ignored: PropTypes.arrayOf(PropTypes.string),
-    placeholder: PropTypes.bool,
+    isEditorLinkAllowed: PropTypes.bool,
+    placeholders: PropTypes.objectOf(PropTypes.string),
     required: PropTypes.arrayOf(PropTypes.string),
     types: PropTypes.objectOf(PropTypes.string)
   })
 };
 
 function FormFields(props) {
-  const { errors = {}, fields, options = {} } = props;
+  const { formFields, options = {} } = props;
   const {
     ignored = [],
-    placeholder = true,
+    placeholders = {},
     required = [],
-    types = {}
+    types = {},
+    isEditorLinkAllowed = false,
+    isLocalLinkAllowed = false
   } = options;
+
+  const nullOrWarning = (value, error, isURL, name) => {
+    let validationError;
+    if (value && isURL) {
+      try {
+        normalizeUrl(value, { stripWWW: false });
+      } catch (err) {
+        validationError = err.message;
+      }
+    }
+    const validationWarning = composeValidators(
+      name === 'githubLink' || isEditorLinkAllowed ? null : editorValidator,
+      fCCValidator,
+      httpValidator,
+      isLocalLinkAllowed ? null : localhostValidator
+    )(value);
+    const message = error || validationError || validationWarning;
+    return message ? (
+      <HelpBlock>
+        <Alert bsStyle={error || validationError ? 'danger' : 'info'}>
+          {message}
+        </Alert>
+      </HelpBlock>
+    ) : null;
+  };
   return (
     <div>
-      {Object.keys(fields)
-        .filter(field => !ignored.includes(field))
-        .map(key => fields[key])
-        .map(({ name, onChange, value, pristine }) => {
-          const key = kebabCase(name);
-          const type = name in types ? types[name] : 'text';
-          return (
-            <Col key={key} xs={12}>
-              <FormGroup>
-                {type === 'hidden' ? null : (
-                  <ControlLabel htmlFor={key}>{startCase(name)}</ControlLabel>
-                )}
-                <FormControl
-                  componentClass={type === 'textarea' ? type : 'input'}
-                  id={key}
-                  name={name}
-                  onChange={onChange}
-                  placeholder={placeholder ? name : ''}
-                  required={required.includes(name)}
-                  rows={4}
-                  type={type}
-                  value={value}
-                />
-                {name in errors && !pristine ? (
-                  <HelpBlock>
-                    <Alert bsStyle='danger'>{errors[name]}</Alert>
-                  </HelpBlock>
-                ) : null}
-              </FormGroup>
-            </Col>
-          );
-        })}
+      {formFields
+        .filter(formField => !ignored.includes(formField.name))
+        .map(({ name, label }) => (
+          <Field key={`${kebabCase(name)}-field`} name={name}>
+            {({ input: { value, onChange }, meta: { pristine, error } }) => {
+              const key = kebabCase(name);
+              const type = name in types ? types[name] : 'text';
+              const placeholder =
+                name in placeholders ? placeholders[name] : '';
+              const isURL = types[name] === 'url';
+              return (
+                <Col key={key} xs={12}>
+                  <FormGroup>
+                    {type === 'hidden' ? null : (
+                      <ControlLabel htmlFor={key}>{label}</ControlLabel>
+                    )}
+                    <FormControl
+                      componentClass={type === 'textarea' ? type : 'input'}
+                      id={key}
+                      name={name}
+                      onChange={onChange}
+                      placeholder={placeholder}
+                      required={required.includes(name)}
+                      rows={4}
+                      type={type}
+                      value={value}
+                    />
+                    {nullOrWarning(value, !pristine && error, isURL, name)}
+                  </FormGroup>
+                </Col>
+              );
+            }}
+          </Field>
+        ))}
     </div>
   );
 }

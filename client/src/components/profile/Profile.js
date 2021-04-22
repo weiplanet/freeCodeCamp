@@ -1,8 +1,9 @@
 import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { Alert, Button, Grid, Row, Col } from '@freecodecamp/react-bootstrap';
+import { Grid, Row, Button } from '@freecodecamp/react-bootstrap';
 import Helmet from 'react-helmet';
-import { Link } from 'gatsby';
+import Link from '../helpers/Link';
+import { useTranslation } from 'react-i18next';
 
 import { CurrentChallengeLink, FullWidthRow, Spacer } from '../helpers';
 import Camper from './components/Camper';
@@ -10,6 +11,9 @@ import HeatMap from './components/HeatMap';
 import Certifications from './components/Certifications';
 import Portfolio from './components/Portfolio';
 import Timeline from './components/TimeLine';
+import envData from '../../../../config/env.json';
+
+const { apiLocation } = envData;
 
 const propTypes = {
   isSessionUser: PropTypes.bool,
@@ -18,6 +22,7 @@ const propTypes = {
       isLocked: PropTypes.bool,
       showAbout: PropTypes.bool,
       showCerts: PropTypes.bool,
+      showDonation: PropTypes.bool,
       showHeatMap: PropTypes.bool,
       showLocation: PropTypes.bool,
       showName: PropTypes.bool,
@@ -25,78 +30,67 @@ const propTypes = {
       showPortfolio: PropTypes.bool,
       showTimeLine: PropTypes.bool
     }),
-    username: PropTypes.string
+    calendar: PropTypes.object,
+    completedChallenges: PropTypes.array,
+    portfolio: PropTypes.array,
+    about: PropTypes.string,
+    githubProfile: PropTypes.string,
+    isGithub: PropTypes.bool,
+    isLinkedIn: PropTypes.bool,
+    isTwitter: PropTypes.bool,
+    isWebsite: PropTypes.bool,
+    joinDate: PropTypes.string,
+    linkedin: PropTypes.string,
+    location: PropTypes.string,
+    name: PropTypes.string,
+    picture: PropTypes.string,
+    points: PropTypes.number,
+    twitter: PropTypes.string,
+    username: PropTypes.string,
+    website: PropTypes.string,
+    yearsTopContributor: PropTypes.array,
+    isDonating: PropTypes.bool
   })
 };
 
-function TakeMeToTheChallenges() {
-  return (
-    <CurrentChallengeLink>
-      <Button block={true} bsSize='lg' bsStyle='primary' className='btn-invert'>
-        Take me to the Challenges
-      </Button>
-    </CurrentChallengeLink>
-  );
-}
-
-function renderIsLocked(username) {
-  return (
+function renderMessage(isSessionUser, username, t) {
+  return isSessionUser ? (
     <Fragment>
-      <Helmet>
-        <title>Profile | freeCodeCamp.org</title>
-      </Helmet>
-      <Spacer size={2} />
-      <Grid>
-        <FullWidthRow>
-          <h2 className='text-center'>
-            {username} has not made their profile public.
-          </h2>
-        </FullWidthRow>
-        <FullWidthRow>
-          <Alert bsStyle='info'>
-            <p>
-              {username} needs to change their privacy setting in order for you
-              to view their profile
-            </p>
-          </Alert>
-        </FullWidthRow>
-        <FullWidthRow>
-          <TakeMeToTheChallenges />
-          <Spacer />
-        </FullWidthRow>
-      </Grid>
+      <FullWidthRow>
+        <h2 className='text-center'>{t('profile.you-not-public')}</h2>
+      </FullWidthRow>
+      <FullWidthRow>
+        <p className='alert alert-info'>{t('profile.you-change-privacy')}</p>
+      </FullWidthRow>
+      <Spacer />
+    </Fragment>
+  ) : (
+    <Fragment>
+      <FullWidthRow>
+        <h2 className='text-center' style={{ overflowWrap: 'break-word' }}>
+          {t('profile.username-not-public', { username: username })}
+        </h2>
+      </FullWidthRow>
+      <FullWidthRow>
+        <p className='alert alert-info'>
+          {t('profile.username-change-privacy', { username: username })}
+        </p>
+      </FullWidthRow>
+      <Spacer />
+      <FullWidthRow>
+        <CurrentChallengeLink>{t('buttons.take-me')}</CurrentChallengeLink>
+      </FullWidthRow>
+      <Spacer />
     </Fragment>
   );
 }
 
-function renderSettingsButton() {
-  return (
-    <Fragment>
-      <Row>
-        <Col sm={4} smOffset={4}>
-          <Link to='/settings'>
-            <Button
-              block={true}
-              bsSize='lg'
-              bsStyle='primary'
-              className='btn-invert'
-            >
-              Update my settings
-            </Button>
-          </Link>
-        </Col>
-      </Row>
-      <Spacer size={2} />
-    </Fragment>
-  );
-}
-
-function Profile({ user, isSessionUser }) {
+function renderProfile(user) {
   const {
     profileUI: {
-      isLocked = true,
       showAbout = false,
       showCerts = false,
+      showDonation = false,
       showHeatMap = false,
       showLocation = false,
       showName = false,
@@ -106,7 +100,6 @@ function Profile({ user, isSessionUser }) {
     },
     calendar,
     completedChallenges,
-    streak,
     githubProfile,
     isLinkedIn,
     isGithub,
@@ -117,52 +110,89 @@ function Profile({ user, isSessionUser }) {
     website,
     name,
     username,
+    joinDate,
     location,
     points,
     picture,
     portfolio,
     about,
-    yearsTopContributor
+    yearsTopContributor,
+    isDonating
   } = user;
 
-  if (isLocked) {
-    return renderIsLocked(username);
-  }
+  return (
+    <Fragment>
+      <Camper
+        about={showAbout ? about : null}
+        githubProfile={githubProfile}
+        isDonating={showDonation ? isDonating : null}
+        isGithub={isGithub}
+        isLinkedIn={isLinkedIn}
+        isTwitter={isTwitter}
+        isWebsite={isWebsite}
+        joinDate={showAbout ? joinDate : null}
+        linkedin={linkedin}
+        location={showLocation ? location : null}
+        name={showName ? name : null}
+        picture={picture}
+        points={showPoints ? points : null}
+        twitter={twitter}
+        username={username}
+        website={website}
+        yearsTopContributor={yearsTopContributor}
+      />
+      {showHeatMap ? <HeatMap calendar={calendar} /> : null}
+      {showCerts ? <Certifications username={username} /> : null}
+      {showPortfolio ? <Portfolio portfolio={portfolio} /> : null}
+      {showTimeLine ? (
+        <Timeline completedMap={completedChallenges} username={username} />
+      ) : null}
+      <Spacer />
+    </Fragment>
+  );
+}
+
+function Profile({ user, isSessionUser }) {
+  const { t } = useTranslation();
+  const {
+    profileUI: { isLocked = true },
+    username
+  } = user;
+
   return (
     <Fragment>
       <Helmet>
-        <title>Profile | freeCodeCamp.org</title>
+        <title>{t('buttons.profile')} | freeCodeCamp.org</title>
       </Helmet>
-      <Spacer size={2} />
+      <Spacer />
       <Grid>
-        {isSessionUser ? renderSettingsButton() : null}
-        <Camper
-          about={showAbout && about}
-          githubProfile={githubProfile}
-          isGithub={isGithub}
-          isLinkedIn={isLinkedIn}
-          isTwitter={isTwitter}
-          isWebsite={isWebsite}
-          linkedin={linkedin}
-          location={showLocation && location}
-          name={showName && name}
-          picture={picture}
-          points={showPoints && points}
-          twitter={twitter}
-          username={username}
-          website={website}
-          yearsTopContributor={yearsTopContributor}
-        />
-        {showHeatMap ? <HeatMap calendar={calendar} streak={streak} /> : null}
-        {showCerts ? <Certifications username={username} /> : null}
-        {showPortfolio ? <Portfolio portfolio={portfolio} /> : null}
-        {showTimeLine ? (
-          <Timeline
-            className='timelime-container'
-            completedMap={completedChallenges}
-            username={username}
-          />
+        {isSessionUser ? (
+          <FullWidthRow className='button-group'>
+            <Link className='btn btn-lg btn-primary btn-block' to='/settings'>
+              {t('buttons.update-settings')}
+            </Link>
+            <Button
+              block={true}
+              bsSize='lg'
+              bsStyle='primary'
+              className='btn-invert'
+              href={`${apiLocation}/signout`}
+            >
+              {t('buttons.sign-me-out')}
+            </Button>
+          </FullWidthRow>
         ) : null}
+        <Spacer />
+        {isLocked ? renderMessage(isSessionUser, username, t) : null}
+        {!isLocked || isSessionUser ? renderProfile(user) : null}
+        {isSessionUser ? null : (
+          <Row className='text-center'>
+            <Link to={`/user/${username}/report-user`}>
+              {t('buttons.flag-user')}
+            </Link>
+          </Row>
+        )}
+        <Spacer />
       </Grid>
     </Fragment>
   );

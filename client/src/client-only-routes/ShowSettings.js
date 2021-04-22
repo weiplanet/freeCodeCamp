@@ -1,24 +1,22 @@
 import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
-import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import { Grid, Button } from '@freecodecamp/react-bootstrap';
 import Helmet from 'react-helmet';
 
-import { apiLocation } from '../../config/env.json';
+import envData from '../../../config/env.json';
 import {
   signInLoadingSelector,
   userSelector,
   isSignedInSelector,
-  hardGoTo
+  hardGoTo as navigate
 } from '../redux';
 import { submitNewAbout, updateUserFlag, verifyCert } from '../redux/settings';
 import { createFlashMessage } from '../components/Flash/redux';
+import { useTranslation } from 'react-i18next';
 
-import Spacer from '../components/helpers/Spacer';
-import Loader from '../components/helpers/Loader';
-import FullWidthRow from '../components/helpers/FullWidthRow';
+import { FullWidthRow, Loader, Spacer } from '../components/helpers';
 import About from '../components/settings/About';
 import Privacy from '../components/settings/Privacy';
 import Email from '../components/settings/Email';
@@ -27,65 +25,22 @@ import Portfolio from '../components/settings/Portfolio';
 import Honesty from '../components/settings/Honesty';
 import Certification from '../components/settings/Certification';
 import DangerZone from '../components/settings/DangerZone';
-import RedirectHome from '../components/RedirectHome';
+import { User } from '../redux/propTypes';
+
+const { apiLocation } = envData;
 
 const propTypes = {
   createFlashMessage: PropTypes.func.isRequired,
-  hardGoTo: PropTypes.func.isRequired,
-  isSignedIn: PropTypes.bool,
-  showLoading: PropTypes.bool,
+  isSignedIn: PropTypes.bool.isRequired,
+  navigate: PropTypes.func.isRequired,
+  showLoading: PropTypes.bool.isRequired,
   submitNewAbout: PropTypes.func.isRequired,
   toggleNightMode: PropTypes.func.isRequired,
   updateInternetSettings: PropTypes.func.isRequired,
   updateIsHonest: PropTypes.func.isRequired,
   updatePortfolio: PropTypes.func.isRequired,
   updateQuincyEmail: PropTypes.func.isRequired,
-  user: PropTypes.shape({
-    about: PropTypes.string,
-    completedChallenges: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.string,
-        solution: PropTypes.string,
-        githubLink: PropTypes.string,
-        challengeType: PropTypes.number,
-        completedDate: PropTypes.number,
-        files: PropTypes.array
-      })
-    ),
-    email: PropTypes.string,
-    githubProfile: PropTypes.string,
-    is2018DataVisCert: PropTypes.bool,
-    isApisMicroservicesCert: PropTypes.bool,
-    isBackEndCert: PropTypes.bool,
-    isDataVisCert: PropTypes.bool,
-    isEmailVerified: PropTypes.bool,
-    isFrontEndCert: PropTypes.bool,
-    isFrontEndLibsCert: PropTypes.bool,
-    isFullStackCert: PropTypes.bool,
-    isHonest: PropTypes.bool,
-    isInfosecQaCert: PropTypes.bool,
-    isJsAlgoDataStructCert: PropTypes.bool,
-    isRespWebDesignCert: PropTypes.bool,
-    linkedin: PropTypes.string,
-    location: PropTypes.string,
-    name: PropTypes.string,
-    picture: PropTypes.string,
-    points: PropTypes.number,
-    portfolio: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        title: PropTypes.string,
-        url: PropTypes.string,
-        image: PropTypes.string,
-        description: PropTypes.string
-      })
-    ),
-    sendQuincyEmail: PropTypes.bool,
-    theme: PropTypes.string,
-    twitter: PropTypes.string,
-    username: PropTypes.string,
-    website: PropTypes.string
-  }),
+  user: User,
   verifyCert: PropTypes.func.isRequired
 };
 
@@ -100,31 +55,22 @@ const mapStateToProps = createSelector(
   })
 );
 
-const mapDispatchToProps = dispatch =>
-  bindActionCreators(
-    {
-      createFlashMessage,
-      hardGoTo,
-      submitNewAbout,
-      toggleNightMode: theme => updateUserFlag({ theme }),
-      updateInternetSettings: updateUserFlag,
-      updateIsHonest: updateUserFlag,
-      updatePortfolio: updateUserFlag,
-      updateQuincyEmail: sendQuincyEmail => updateUserFlag({ sendQuincyEmail }),
-      verifyCert
-    },
-    dispatch
-  );
-
-const createHandleSignoutClick = hardGoTo => e => {
-  e.preventDefault();
-  return hardGoTo(`${apiLocation}/signout`);
+const mapDispatchToProps = {
+  createFlashMessage,
+  navigate,
+  submitNewAbout,
+  toggleNightMode: theme => updateUserFlag({ theme }),
+  updateInternetSettings: updateUserFlag,
+  updateIsHonest: updateUserFlag,
+  updatePortfolio: updateUserFlag,
+  updateQuincyEmail: sendQuincyEmail => updateUserFlag({ sendQuincyEmail }),
+  verifyCert
 };
 
-function ShowSettings(props) {
+export function ShowSettings(props) {
+  const { t } = useTranslation();
   const {
     createFlashMessage,
-    hardGoTo,
     isSignedIn,
     submitNewAbout,
     toggleNightMode,
@@ -138,9 +84,14 @@ function ShowSettings(props) {
       isDataVisCert,
       isFrontEndCert,
       isInfosecQaCert,
+      isQaCertV7,
+      isInfosecCertV7,
       isFrontEndLibsCert,
       isFullStackCert,
       isRespWebDesignCert,
+      isSciCompPyCertV7,
+      isDataAnalysisPyCertV7,
+      isMachineLearningPyCertV7,
       isEmailVerified,
       isHonest,
       sendQuincyEmail,
@@ -157,6 +108,7 @@ function ShowSettings(props) {
       website,
       portfolio
     },
+    navigate,
     showLoading,
     updateQuincyEmail,
     updateInternetSettings,
@@ -169,15 +121,14 @@ function ShowSettings(props) {
     return <Loader fullScreen={true} />;
   }
 
-  if (!showLoading && !isSignedIn) {
-    return <RedirectHome />;
+  if (!isSignedIn) {
+    navigate(`${apiLocation}/signin`);
+    return <Loader fullScreen={true} />;
   }
 
   return (
     <Fragment>
-      <Helmet>
-        <title>Settings | freeCodeCamp.org</title>
-      </Helmet>
+      <Helmet title={`${t('buttons.settings')} | freeCodeCamp.org`} />
       <Grid>
         <main>
           <Spacer size={2} />
@@ -187,23 +138,15 @@ function ShowSettings(props) {
               bsSize='lg'
               bsStyle='primary'
               className='btn-invert'
-              href={`/${username}`}
+              href={`${apiLocation}/signout`}
             >
-              Show me my public portfolio
-            </Button>
-            <Button
-              block={true}
-              bsSize='lg'
-              bsStyle='primary'
-              className='btn-invert'
-              href={'/signout'}
-              onClick={createHandleSignoutClick(hardGoTo)}
-            >
-              Sign me out of freeCodeCamp
+              {t('buttons.sign-me-out')}
             </Button>
           </FullWidthRow>
           <Spacer />
-          <h1 className='text-center'>{`Account Settings for ${username}`}</h1>
+          <h1 className='text-center' style={{ overflowWrap: 'break-word' }}>
+            {t('settings.for', { username: username })}
+          </h1>
           <About
             about={about}
             currentTheme={theme}
@@ -243,14 +186,19 @@ function ShowSettings(props) {
             is2018DataVisCert={is2018DataVisCert}
             isApisMicroservicesCert={isApisMicroservicesCert}
             isBackEndCert={isBackEndCert}
+            isDataAnalysisPyCertV7={isDataAnalysisPyCertV7}
             isDataVisCert={isDataVisCert}
             isFrontEndCert={isFrontEndCert}
             isFrontEndLibsCert={isFrontEndLibsCert}
             isFullStackCert={isFullStackCert}
             isHonest={isHonest}
+            isInfosecCertV7={isInfosecCertV7}
             isInfosecQaCert={isInfosecQaCert}
             isJsAlgoDataStructCert={isJsAlgoDataStructCert}
+            isMachineLearningPyCertV7={isMachineLearningPyCertV7}
+            isQaCertV7={isQaCertV7}
             isRespWebDesignCert={isRespWebDesignCert}
+            isSciCompPyCertV7={isSciCompPyCertV7}
             username={username}
             verifyCert={verifyCert}
           />
@@ -265,7 +213,4 @@ function ShowSettings(props) {
 ShowSettings.displayName = 'ShowSettings';
 ShowSettings.propTypes = propTypes;
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(ShowSettings);
+export default connect(mapStateToProps, mapDispatchToProps)(ShowSettings);
